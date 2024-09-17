@@ -75,6 +75,14 @@ namespace DSharpPlus.Net
             this.HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", Utilities.GetFormattedToken(config));
         }
 
+        public void ResetToken(string token)
+        {
+            // if the authorization header is already present, remove it
+            if (this.HttpClient.DefaultRequestHeaders.Contains("Authorization"))
+                this.HttpClient.DefaultRequestHeaders.Remove("Authorization");
+            this.HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", token);
+        }
+
         internal RestClient(IWebProxy proxy, TimeSpan timeout, bool useRelativeRatelimit,
             ILogger logger, CaptchaHandlerDelegate captchaHandler) // This is for meta-clients, such as the webhook client
         {

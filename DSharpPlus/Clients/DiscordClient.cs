@@ -323,8 +323,16 @@ namespace DSharpPlus
         /// <exception cref="Exceptions.UnauthorizedException">Thrown when an invalid token was provided.</exception>
         /// <exception cref="Exceptions.BadRequestException">Thrown when an invalid parameter was provided.</exception>
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
-        public async Task ConnectAsync(DiscordActivity activity = null, UserStatus? status = null, DateTimeOffset? idlesince = null)
+        public async Task<string> ConnectAsync(DiscordActivity activity = null, UserStatus? status = null, DateTimeOffset? idlesince = null)
         {
+            if (!string.IsNullOrWhiteSpace(this.Configuration.Username) && !string.IsNullOrWhiteSpace(this.Configuration.Password))
+            {
+                var res = await this.ApiClient.SendLoginRequestAsync(this.Configuration.Username, this.Configuration.Password, this.Configuration.OnMFA).ConfigureAwait(false);
+                this.Configuration.TokenType = TokenType.User;
+                this.Configuration.Token = res.Token;
+                this.ApiClient.ResetToken(res.Token);
+            }
+
             // Check if connection lock is already set, and set it if it isn't
             if (!this.ConnectionLock.Wait(0))
                 throw new InvalidOperationException("This client is already connected.");
@@ -405,6 +413,8 @@ namespace DSharpPlus
             static void FailConnection(ManualResetEventSlim cl) =>
                 // unlock this (if applicable) so we can let others attempt to connect
                 cl?.Set();
+
+            return this.Configuration.Token;
         }
 
         public Task ReconnectAsync(bool startNewSession = false)
@@ -704,6 +714,8 @@ namespace DSharpPlus
             this.CurrentUser.AvatarHash = usr.AvatarHash;
             return this.CurrentUser;
         }
+
+        public async Task UpdateBannerColorAsync(int color) => await this.ApiClient.ModifyBannerColorAsync(color).ConfigureAwait(false);
 
         /// <summary>
         /// Gets a guild template by the code.

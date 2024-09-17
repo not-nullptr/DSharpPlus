@@ -42,6 +42,12 @@ namespace DSharpPlus.Net.Abstractions
         public IDictionary<ulong, string> Nicknames { get; set; }
     }
 
+    internal sealed class RestUserProfileUpdatePayload
+    {
+        [JsonProperty("accent_color", NullValueHandling = NullValueHandling.Ignore)]
+        public int? AccentColor { get; set; }
+    }
+
     internal sealed class RestUserUpdateCurrentPayload
     {
         [JsonProperty("username", NullValueHandling = NullValueHandling.Ignore)]

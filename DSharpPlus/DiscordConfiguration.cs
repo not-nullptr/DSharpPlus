@@ -24,6 +24,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Threading.Tasks;
 using DSharpPlus.Net.Udp;
 using DSharpPlus.Net.WebSocket;
 using Microsoft.Extensions.Logging;
@@ -41,15 +42,39 @@ namespace DSharpPlus
         public string Token
         {
             internal get => this._token;
-            set
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                    throw new ArgumentNullException(nameof(value), "Token cannot be null, empty, or all whitespace.");
-
-                this._token = value.Trim();
-            }
+            set => this._token = value.Trim();
         }
         private string _token = "";
+
+        /// <summary>
+        /// Sets the username used to identify the client.
+        /// </summary>
+        public string Username
+        {
+            internal get => this._username;
+            set => this._username = value.Trim();
+        }
+        private string _username = "";
+
+        /// <summary>
+        /// Sets the password used to identify the client.
+        /// </summary>
+        public string Password
+        {
+            internal get => this._password;
+            set => this._password = value;
+        }
+
+        private string _password = "";
+
+        public Func<Task<string>> OnMFA
+        {
+            internal get => this._onMfa;
+            set => this._onMfa = value;
+        }
+
+        private Func<Task<string>> _onMfa = null;
+
 
         /// <summary>
         /// <para>Sets the type of the token used to identify the client.</para>
@@ -224,6 +249,9 @@ namespace DSharpPlus
             this.Intents = other.Intents;
             this.LoggerFactory = other.LoggerFactory;
             this.LogUnknownEvents = other.LogUnknownEvents;
+            this.OnMFA = other.OnMFA;
+            this.Username = other.Username;
+            this.Password = other.Password;
         }
     }
 }

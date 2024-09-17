@@ -34,6 +34,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus.Entities;
 using DSharpPlus.Enums;
+using DSharpPlus.EventArgs;
 using DSharpPlus.Net.Abstractions;
 using DSharpPlus.Net.Serialization;
 using Microsoft.Extensions.Logging;
@@ -57,6 +58,8 @@ namespace DSharpPlus.Net
             this._discord = client;
             this._rest = rest ?? new RestClient(client.Configuration, client.Logger, client.HandleCaptchaAsync);
         }
+
+        public void ResetToken(string token) => this._rest.ResetToken(token);
 
         internal DiscordApiClient(IWebProxy proxy, TimeSpan timeout, bool useRelativeRateLimit, ILogger logger) // This is for meta-clients, such as the webhook client
         {
@@ -1297,6 +1300,45 @@ namespace DSharpPlus.Net
                 .ToArray();
         }
 
+        internal async Task<AuthStuffIdk> SendLoginRequestAsync(string username, string password, Func<Task<string>> OnMFA = null)
+        {
+            var route = $"{Endpoints.AUTH}{Endpoints.LOGIN}";
+            //create a body with a `login` (email) and `password` field
+            var body = new Dictionary<string, string>
+            {
+                { "login", username },
+                { "password", password },
+            };
+
+            var bucket = this._rest.GetBucket(RestRequestMethod.POST, route, new { }, out var path);
+            var url = Utilities.GetApiUriFor(path);
+
+            var res = await this.DoRequestAsync(this._discord, bucket, url, RestRequestMethod.POST, route, new Dictionary<string, string>(), DiscordJson.SerializeObject(body)).ConfigureAwait(false);
+
+            var ret = JsonConvert.DeserializeObject<AuthStuffIdk>(res.Response);
+            if (ret.Mfa == true)
+            {
+                if (OnMFA is null) throw new NotImplementedException("MFA is required for this account, but no MFA handler was provided.");
+                var mfa = await OnMFA().ConfigureAwait(false);
+                // remove username and password, add ticket and code
+                body.Remove("login");
+                body.Remove("password");
+                body.Add("ticket", ret.Ticket);
+                body.Add("code", mfa);
+
+                // set the bucket and url to /mfa/totp
+                route = $"{Endpoints.AUTH}{Endpoints.MFA}{Endpoints.TOTP}";
+                bucket = this._rest.GetBucket(RestRequestMethod.POST, route, new { }, out path);
+                url = Utilities.GetApiUriFor(path);
+
+                res = await this.DoRequestAsync(this._discord, bucket, url, RestRequestMethod.POST, route, new Dictionary<string, string>(), DiscordJson.SerializeObject(body)).ConfigureAwait(false);
+
+                ret = JsonConvert.DeserializeObject<AuthStuffIdk>(res.Response);
+            }
+
+            return ret;
+        }
+
         internal async Task<DiscordScheduledGuildEvent> GetScheduledGuildEventAsync(ulong guild_id, ulong guild_scheduled_event_id)
         {
             var route = $"{Endpoints.GUILDS}/:guild_id{Endpoints.EVENTS}/:guild_scheduled_event_id";
@@ -2243,6 +2285,21 @@ namespace DSharpPlus.Net
             var user_raw = JsonConvert.DeserializeObject<TransportUser>(res.Response);
 
             return user_raw;
+        }
+
+        internal async Task ModifyBannerColorAsync(int color)
+        {
+            var pld = new RestUserProfileUpdatePayload
+            {
+                AccentColor = color
+            };
+
+            var route = $"{Endpoints.USERS}{Endpoints.ME}{Endpoints.PROFILE}";
+            var bucket = this._rest.GetBucket(RestRequestMethod.PATCH, route, new { }, out var path);
+
+            var url = Utilities.GetApiUriFor(path);
+            await this.DoRequestAsync(this._discord, bucket, url, RestRequestMethod.PATCH, route, payload: DiscordJson.SerializeObject(pld)).ConfigureAwait(false);
+            this._discord.CurrentUser._bannerColor = color;
         }
 
         internal async Task<IReadOnlyList<DiscordGuild>> GetCurrentUserGuildsAsync(int limit = 100, ulong? before = null, ulong? after = null)

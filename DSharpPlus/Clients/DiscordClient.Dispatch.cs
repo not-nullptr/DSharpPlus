@@ -805,7 +805,14 @@ namespace DSharpPlus
                 xo._channel_id = channel.Id;
             }
 
-            this._guilds[channel.GuildId.Value]._channels[channel.Id] = channel;
+            if (channel.GuildId is not null)
+            {
+                this._guilds[channel.GuildId.Value]._channels[channel.Id] = channel;
+            } else
+            {
+                // this is a DM channel
+                this._privateChannels[channel.Id] = channel as DiscordDmChannel;
+            }
 
             await this._channelCreated.InvokeAsync(this, new ChannelCreateEventArgs { Channel = channel, Guild = channel.Guild }).ConfigureAwait(false);
         }

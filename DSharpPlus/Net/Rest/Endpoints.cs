@@ -93,5 +93,8 @@ namespace DSharpPlus.Net
         public const string STICKERPACKS = "/sticker-packs";
         public const string STAGE_INSTANCES = "/stage-instances";
         public const string POST_DATA = "/post-data";
+        public const string PROFILE = "/profile";
+        public const string MFA = "/mfa";
+        public const string TOTP = "/totp";
     }
 }
